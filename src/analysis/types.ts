@@ -10,6 +10,24 @@ export interface Frame {
   /** Media time in seconds, as decoded from the file (before any slow-motion correction). */
   t: number;
   lm: Pt[] | null;
+  /** MediaPipe world landmarks: metres, origin between the hips, y down. */
+  w?: Pt3[] | null;
+}
+
+export interface Pt3 {
+  x: number;
+  y: number;
+  z: number;
+  v: number;
+}
+
+/** A measured moment: the raw landmarks of that frame and the angles drawn on it. */
+export interface Keyframe {
+  side: Side;
+  t: number;
+  label: string;
+  pose: Pt[] | null;
+  angles: Record<string, number | null>;
 }
 
 export type Side = 'L' | 'R';
@@ -50,6 +68,8 @@ export interface Metric {
   /** One sentence: what the number means and the reference range. */
   note: string;
   reference: string;
+  /** Axis for the range bar and the band that counts as the reference. */
+  range?: { min: number; max: number; band: [number, number]; bandLabel?: string };
 }
 
 export interface Quality {
@@ -87,8 +107,12 @@ export interface SideViewResult {
   };
   metrics: Metric[];
   kneeCurve: Curve[];
-  /** Frame times (media seconds) of representative initial contacts, for snapshots. */
-  keyframes: { side: Side; t: number; label: string }[];
+  /** Representative initial contacts, for snapshots and annotated figures. */
+  keyframes: Keyframe[];
+  /** +1 when the runner moves to the right of the image. */
+  facing: 1 | -1;
+  /** Media times of successive initial contacts of one foot (a clean loop for the 3D replay). */
+  strideTimes: number[];
 }
 
 export interface RearViewResult {
@@ -102,7 +126,8 @@ export interface RearViewResult {
   };
   metrics: Metric[];
   rearfootCurve: Curve[];
-  keyframes: { side: Side; t: number; label: string }[];
+  keyframes: Keyframe[];
+  strideTimes: number[];
 }
 
 export interface Subject {

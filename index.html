@@ -34,7 +34,8 @@
 
 <main id="top">
   <section class="hero">
-    <div class="wrap">
+    <div class="wrap hero-grid">
+      <div class="hero-copy">
       <p class="eyebrow">Análise de passada</p>
       <h1 class="display h1">Mostra-me<br>como <span>corres.</span></h1>
       <p class="lead">Carrega um vídeo de lado e um de trás. Recebes o relatório da tua passada: tipo de apoio, pronação, cadência e o que trabalhar. Os vídeos não saem do teu dispositivo.</p>
@@ -42,6 +43,8 @@
         <a class="btn gold" href="#videos">Começar a análise<svg aria-hidden="true"><use href="#i-arrow"/></svg></a>
         <a class="btn ghost" href="#protocolo">Como gravar</a>
       </div>
+      </div>
+      <div class="hero-stage" data-hero aria-hidden="true"></div>
       <div class="facts">
         <div><b>Apoio</b><p>Calcanhar, médio-pé ou antepé, passo a passo, a partir do vídeo de lado.</p></div>
         <div><b>Pronação</b><p>Pronador, neutro ou supinador, pelo ângulo do calcanhar no vídeo de trás.</p></div>
@@ -195,6 +198,7 @@
         <div class="row"><span>Modelo de pose</span><div class="bar" data-bar="model"><i></i></div><span class="mono" data-pct="model">0 %</span></div>
         <div class="row" data-row="side"><span>Vídeo de lado</span><div class="bar" data-bar="side"><i></i></div><span class="mono" data-pct="side">0 %</span></div>
         <div class="row" data-row="rear"><span>Vídeo de trás</span><div class="bar" data-bar="rear"><i></i></div><span class="mono" data-pct="rear">0 %</span></div>
+        <canvas id="live" class="live" width="640" height="360" aria-label="Pré-visualização do esqueleto detetado"></canvas>
         <p class="msg" id="msg">A carregar o modelo de pose (cerca de 9 MB, só da primeira vez).</p>
         <button class="btn ghost sm" type="button" id="cancel" style="margin-top:16px">Cancelar</button>
       </div>

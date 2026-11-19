@@ -1,12 +1,68 @@
 import './styles/tokens.css';
 import './styles/app.css';
-import { extractPose, preloadPose, snapshot, type Extracted } from './pose';
+import { drawSkeleton, extractPose, preloadPose, snapshot, type Extracted } from './pose';
 import { analyseSide } from './analysis/side';
 import { analyseRear } from './analysis/rear';
-import { synthRear, synthSide } from './analysis/synth';
-import type { RearViewResult, SideViewResult, Subject, View } from './analysis/types';
+import { synthRear, synthSide, withWorld } from './analysis/synth';
+import type { Frame, RearViewResult, SideViewResult, Subject, View } from './analysis/types';
 import { renderReport, type ReportInput } from './ui/report';
 import { attachTooltips } from './ui/charts';
+import { buildRunnerGlb, loadModelViewer, runnerViewer } from './ui/runner3d';
+import { rearFigure, sideFigure } from './ui/figures';
+
+interface Replay { frames: Frame[]; t0?: number; t1?: number; slow: number }
+let replay: Replay | null = null;
+
+/** Loop of whole strides: from one initial contact to the 3rd one after it. */
+function loopWindow(times: number[]): { t0?: number; t1?: number } {
+  if (times.length < 3) return {};
+  const k = Math.min(3, times.length - 1);
+  const start = Math.max(0, Math.floor((times.length - 1 - k) / 2));
+  return { t0: times[start], t1: times[start + k] };
+}
+
+// ---------- the runner illustrations ----------
+const demoSide = synthSide({ strikeDeg: 12, cadence: 172 });
+const demoRear = synthRear({ eversionDeg: 7, cadence: 172 });
+(function illustrate() {
+  const s = demoSide[Math.round(120 / 172 * 60 * 0.02)]?.lm;
+  const r = demoRear[Math.round(120 / 172 * 60 * 0.15)]?.lm;
+  const sideIll = document.querySelector('.drop[data-view="side"] [data-ill]');
+  const rearIll = document.querySelector('.drop[data-view="rear"] [data-ill]');
+  if (s && sideIll) sideIll.innerHTML = sideFigure(s, 'L', 1, {}, { annotate: false, title: 'Corredor visto de lado' });
+  if (r && rearIll) rearIll.innerHTML = rearFigure(r, {}, null, { annotate: false, title: 'Corredor visto de trás' });
+})();
+
+// ---------- hero mannequin ----------
+function mountHero() {
+  const host = document.querySelector<HTMLElement>('[data-hero]');
+  if (!host) return;
+  const frames = withWorld(synthSide({ strikeDeg: 10, cadence: 176, seconds: 3, fps: 60 }));
+  const stride = 120 / 176;
+  const glb = buildRunnerGlb(frames, { t0: 0.5, t1: 0.5 + 2 * stride });
+  if (!glb) return;
+  const v = runnerViewer(glb, { label: 'Boneco 3D a correr', orbit: '40deg 80deg auto', autoRotate: true, controls: false });
+  host.appendChild(v);
+}
+const idle = (window as Window & { requestIdleCallback?: (cb: () => void) => void }).requestIdleCallback ?? ((cb: () => void) => setTimeout(cb, 600));
+if (!matchMedia('(max-width: 720px)').matches) idle(() => { mountHero(); });
+
+function mountReplay(root: HTMLElement) {
+  const stage = root.querySelector<HTMLElement>('[data-replay]');
+  if (!stage || !replay) return;
+  const glb = buildRunnerGlb(replay.frames, replay);
+  if (!glb) return;
+  stage.querySelector('.stage-empty')?.remove();
+  const v = runnerViewer(glb, { label: 'Réplica 3D da tua corrida', orbit: '35deg 78deg auto' }) as HTMLElement & { timeScale: number };
+  stage.prepend(v);
+  stage.addEventListener('click', (e) => {
+    const b = (e.target as Element).closest<HTMLButtonElement>('button');
+    if (!b) return;
+    b.parentElement!.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    if (b.dataset.speed) v.timeScale = parseFloat(b.dataset.speed);
+    if (b.dataset.orbit) v.setAttribute('camera-orbit', b.dataset.orbit);
+  });
+}
 
 const $ = <T extends Element = HTMLElement>(s: string, root: ParentNode = document) => root.querySelector(s) as T;
 const files: Partial<Record<View, File>> = {};
@@ -118,14 +174,30 @@ async function run() {
       const f = files[view];
       if (!f) continue;
       msg(view === 'side' ? 'A seguir o corpo no vídeo de lado, imagem a imagem.' : 'A seguir o corpo no vídeo de trás, imagem a imagem.');
-      const ex = await extractPose(f, (p) => { setBar('model', 1); setBar(view, p); }, { signal: abort.signal });
+      const live = $<HTMLCanvasElement>('#live');
+      const ex = await extractPose(f, (p) => { setBar('model', 1); setBar(view, p); }, {
+        signal: abort.signal,
+        onFrame: (video, frame, i) => {
+          if (i % 3) return;
+          const sc = Math.min(1, 640 / Math.max(video.videoWidth, video.videoHeight));
+          live.width = Math.round(video.videoWidth * sc);
+          live.height = Math.round(video.videoHeight * sc);
+          const g = live.getContext('2d')!;
+          g.filter = 'grayscale(1) brightness(.7)';
+          g.drawImage(video, 0, 0, live.width, live.height);
+          g.filter = 'none';
+          drawSkeleton(g, frame.lm, sc, null, live.width);
+        },
+      });
       extracted[view] = ex;
       if (ex.frames.filter((x) => x.lm).length < 20) throw new Error(`Não encontrei ninguém no vídeo ${view === 'side' ? 'de lado' : 'de trás'}. Confirma que o corpo inteiro está no enquadramento.`);
       if (view === 'side') side = analyseSide(ex.frames, subj, slow);
       else rear = analyseRear(ex.frames, subj, slow);
     }
 
-    msg('A preparar as imagens e o relatório.');
+    msg('A preparar as imagens, o boneco 3D e o relatório.');
+    const src3d = extracted.side && side ? { ex: extracted.side, times: side.strideTimes, slow: side.slowMotion } : extracted.rear && rear ? { ex: extracted.rear, times: rear.strideTimes, slow: rear.slowMotion } : null;
+    replay = src3d ? { frames: src3d.ex.frames, slow: src3d.slow, ...loopWindow(src3d.times) } : null;
     for (const [view, res] of [['side', side], ['rear', rear]] as const) {
       const ex = extracted[view];
       if (!ex || !res) continue;
@@ -152,6 +224,7 @@ function show(input: ReportInput) {
   sec.innerHTML = renderReport(input);
   sec.hidden = false;
   sec.querySelectorAll<HTMLElement>('.chart').forEach(attachTooltips);
+  void loadModelViewer().then(() => mountReplay(sec));
   sec.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
 }
 
@@ -176,9 +249,12 @@ $('#run').addEventListener('click', run);
 $('#cancel').addEventListener('click', () => abort?.abort());
 $('#demo').addEventListener('click', () => {
   const subj: Subject = { name: 'Exemplo', heightCm: 178, speedKmh: 11.5, shoe: '', surface: 'treadmill' };
+  const sf = withWorld(synthSide({ strikeDeg: 15, cadence: 158, noise: 1 }));
+  const side = analyseSide(sf, subj);
+  replay = { frames: sf, slow: 1, ...loopWindow(side.strideTimes) };
   show({
     subject: subj,
-    side: analyseSide(synthSide({ strikeDeg: 15, cadence: 158, noise: 1 }), subj),
+    side,
     rear: analyseRear(synthRear({ eversionDeg: 12, cadence: 158 }), subj),
     photos: [],
     date: new Date(),

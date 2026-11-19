@@ -1,6 +1,6 @@
 // Frontal (rear view) analysis: rearfoot eversion (pronation), pelvic drop, knee valgus, crossover.
 
-import { Frame, Metric, RearViewResult, Side, Subject } from './types';
+import { Frame, Keyframe, Metric, RearViewResult, Side, Subject } from './types';
 import { cadenceMetric, level, prepare, quality, typical } from './common';
 import { deg, median, meanCurve, normalise, round } from './signal';
 import { visibility } from './tracks';
@@ -110,10 +110,19 @@ export function analyseRear(frames: Frame[], _subject: Subject, slowMotion = 0):
     return { side: s, mean: meanCurve(curves) };
   }).filter((c) => c.mean.length);
 
-  const keyframes = sides.flatMap((s) => {
+  const keyframes: Keyframe[] = sides.flatMap((s) => {
     const st = typical(steps.filter((x) => x.side === s), (x) => x.evPeak);
-    return st ? [{ side: s, t: tr.t[st.evPeakAt], label: `Meio do apoio · pé ${s === 'L' ? 'esquerdo' : 'direito'}` }] : [];
+    return st
+      ? [{
+          side: s,
+          t: tr.t[st.evPeakAt],
+          label: `Meio do apoio · pé ${s === 'L' ? 'esquerdo' : 'direito'}`,
+          pose: frames[st.evPeakAt]?.lm ?? null,
+          angles: { rearfoot: rearfoot(s, st.evPeakAt), drop: st.drop, valgus: st.valgus },
+        }]
+      : [];
   });
+  const strideTimes = contacts.filter((c) => c.side === 'L').map((c) => tr.t[c.ic]);
 
   const pronLevel = (v: number | null) =>
     level(v, (x) => x >= PRONATION.low && x <= PRONATION.high, (x) => x >= 0 && x <= PRONATION.severe);
@@ -121,6 +130,7 @@ export function analyseRear(frames: Frame[], _subject: Subject, slowMotion = 0):
   const metrics: Metric[] = [
     {
       id: 'pronation',
+      range: { min: -6, max: 20, band: [PRONATION.low, PRONATION.high], bandLabel: 'neutro' },
       label: 'Pronação do retropé',
       value: worst,
       unit: '° de eversão',
@@ -133,6 +143,7 @@ export function analyseRear(frames: Frame[], _subject: Subject, slowMotion = 0):
     cadenceMetric(p.cadence),
     {
       id: 'drop',
+      range: { min: 0, max: 14, band: [0, 5] },
       label: 'Queda da anca',
       value: drop.all,
       unit: '°',
@@ -144,6 +155,7 @@ export function analyseRear(frames: Frame[], _subject: Subject, slowMotion = 0):
     },
     {
       id: 'valgus',
+      range: { min: -5, max: 25, band: [-5, 8] },
       label: 'Joelho para dentro',
       value: valgus.all,
       unit: '°',
@@ -155,6 +167,7 @@ export function analyseRear(frames: Frame[], _subject: Subject, slowMotion = 0):
     },
     {
       id: 'width',
+      range: { min: -40, max: 80, band: [15, 80] },
       label: 'Largura da passada',
       value: width.all,
       unit: '% da bacia',
@@ -185,5 +198,6 @@ export function analyseRear(frames: Frame[], _subject: Subject, slowMotion = 0):
     metrics,
     rearfootCurve,
     keyframes,
+    strideTimes,
   };
 }

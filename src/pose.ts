@@ -80,7 +80,7 @@ async function frameInterval(video: HTMLVideoElement): Promise<number> {
 export async function extractPose(
   file: File,
   onProgress: (fraction: number) => void,
-  opts: { maxSeconds?: number; signal?: AbortSignal } = {},
+  opts: { maxSeconds?: number; signal?: AbortSignal; onFrame?: (video: HTMLVideoElement, frame: Frame, index: number) => void } = {},
 ): Promise<Extracted> {
   const pose = await load();
   const video = document.createElement('video');
@@ -108,18 +108,22 @@ export async function extractPose(
     ts += Math.max(1, Math.round(dt * 1000));
     const res = pose.detectForVideo(video, ts);
     const lm = res.landmarks?.[0];
-    frames.push({
+    const wl = res.worldLandmarks?.[0];
+    const frame: Frame = {
       t: video.currentTime,
       lm: lm ? lm.map((p) => ({ x: p.x * W, y: p.y * H, v: p.visibility ?? 1 })) : null,
-    });
+      w: wl ? wl.map((p, i) => ({ x: p.x, y: p.y, z: p.z, v: lm?.[i]?.visibility ?? 1 })) : null,
+    };
+    frames.push(frame);
     onProgress((t - start) / span);
+    opts.onFrame?.(video, frame, frames.length);
   }
   onProgress(1);
   return { frames, width: W, height: H, duration, video };
 }
 
 /** Draw one frame of the clip with the skeleton over it, as a JPEG data URL. */
-export async function snapshot(video: HTMLVideoElement, t: number, frames: Frame[], highlight: 'L' | 'R'): Promise<string> {
+export async function snapshot(video: HTMLVideoElement, t: number, frames: Frame[], highlight: 'L' | 'R' | null): Promise<string> {
   video.currentTime = t;
   await once(video, 'seeked');
   const W = video.videoWidth, H = video.videoHeight;
@@ -134,7 +138,16 @@ export async function snapshot(video: HTMLVideoElement, t: number, frames: Frame
 
   let f = frames[0];
   for (const fr of frames) if (Math.abs(fr.t - t) < Math.abs(f.t - t)) f = fr;
-  if (f?.lm) {
+  if (f?.lm) drawSkeleton(g, f.lm, scale, highlight, c.width);
+  return c.toDataURL('image/jpeg', 0.85);
+}
+
+/** Draw the detected skeleton over a canvas that holds the frame. */
+export function drawSkeleton(g: CanvasRenderingContext2D, lm: Frame['lm'], scale: number, highlight: 'L' | 'R' | null, width: number) {
+  if (!lm) return;
+  {
+    const f = { lm };
+    const c = { width };
     const P = (i: number) => [f.lm![i].x * scale, f.lm![i].y * scale] as const;
     const bones: [number, number, 'L' | 'R' | 'C'][] = [
       [11, 12, 'C'], [23, 24, 'C'], [11, 23, 'L'], [12, 24, 'R'],
@@ -144,8 +157,8 @@ export async function snapshot(video: HTMLVideoElement, t: number, frames: Frame
     g.lineCap = 'round';
     const lw = Math.max(2, c.width / 260);
     for (const [a, b, s] of bones) {
-      const hot = s === highlight;
-      g.strokeStyle = hot ? '#e6b450' : 'rgba(242,241,236,0.85)';
+      const hot = s === highlight || (!highlight && s !== 'C');
+      g.strokeStyle = hot ? '#ffffff' : 'rgba(244,244,245,0.55)';
       g.lineWidth = hot ? lw * 1.6 : lw;
       g.beginPath();
       g.moveTo(...P(a));
@@ -156,9 +169,8 @@ export async function snapshot(video: HTMLVideoElement, t: number, frames: Frame
       const [x, y] = P(i);
       g.fillStyle = '#0b0b0c';
       g.beginPath(); g.arc(x, y, lw * 1.6, 0, Math.PI * 2); g.fill();
-      g.fillStyle = (i % 2 === 1) === (highlight === 'L') ? '#e6b450' : '#f2f1ec';
+      g.fillStyle = highlight && (i % 2 === 1) === (highlight === 'L') ? '#ffffff' : '#8a8a8e';
       g.beginPath(); g.arc(x, y, lw, 0, Math.PI * 2); g.fill();
     }
   }
-  return c.toDataURL('image/jpeg', 0.85);
 }

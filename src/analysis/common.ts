@@ -53,6 +53,7 @@ export function cadenceMetric(c: number | null): Metric {
   return {
     id: 'cadence',
     label: 'Cadência',
+    range: { min: 140, max: 200, band: [165, 185] },
     value: v,
     unit: 'passos/min',
     verdict: v == null ? 'Sem dados' : v >= 165 ? 'Boa' : v >= 155 ? 'Baixa' : 'Muito baixa',

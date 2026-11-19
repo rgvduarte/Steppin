@@ -1,6 +1,6 @@
 // Sagittal (side view) analysis: foot strike, overstride, knee, trunk, bounce, cadence.
 
-import { Frame, Metric, Side, SideViewResult, StrikeStep, Subject } from './types';
+import { Frame, Keyframe, Metric, Side, SideViewResult, StrikeStep, Subject } from './types';
 import { cadenceMetric, kneeFlex, level, prepare, quality, typical } from './common';
 import { deg, median, meanCurve, normalise, round } from './signal';
 import { visibility } from './tracks';
@@ -150,10 +150,20 @@ export function analyseSide(frames: Frame[], subject: Subject, slowMotion = 0): 
     return { side: s, mean: meanCurve(curves) };
   }).filter((c) => c.mean.length);
 
-  const keyframes = use.flatMap((s) => {
+  const keyframes: Keyframe[] = use.flatMap((s) => {
     const st = typical(steps.filter((x) => x.side === s), (x) => x.fsa);
-    return st ? [{ side: s, t: tr.t[st.ic], label: `Contacto inicial · pé ${s === 'L' ? 'esquerdo' : 'direito'}` }] : [];
+    return st
+      ? [{
+          side: s,
+          t: tr.t[st.ic],
+          label: `Contacto inicial · pé ${s === 'L' ? 'esquerdo' : 'direito'}`,
+          pose: frames[st.ic]?.lm ?? null,
+          angles: { tibia: st.tibia, knee: st.kneeIc, foot: st.fsa + offset[s], fsa: st.fsa, trunk: lean[st.ic] },
+        }]
+      : [];
   });
+  const loopSide = use[0];
+  const strideTimes = contacts.filter((c) => c.side === loopSide).map((c) => tr.t[c.ic]);
 
   const r1 = (x: number | null) => round(x, 1);
   const bySide1 = (b: Partial<Record<Side, number | null>>) => ({ L: r1(b.L ?? null), R: r1(b.R ?? null) });
@@ -161,6 +171,7 @@ export function analyseSide(frames: Frame[], subject: Subject, slowMotion = 0): 
   const metrics: Metric[] = [
     {
       id: 'strike',
+      range: { min: -20, max: 30, band: [STRIKE.fore, STRIKE.rear], bandLabel: 'médio-pé' },
       label: 'Tipo de apoio',
       value: r1(fsa.all),
       unit: '°',
@@ -175,6 +186,7 @@ export function analyseSide(frames: Frame[], subject: Subject, slowMotion = 0): 
     cadenceMetric(p.cadence),
     {
       id: 'tibia',
+      range: { min: -10, max: 25, band: [0, 8] },
       label: 'Ângulo da tíbia no contacto',
       value: r1(tibia.all),
       unit: '°',
@@ -186,6 +198,7 @@ export function analyseSide(frames: Frame[], subject: Subject, slowMotion = 0): 
     },
     {
       id: 'reach',
+      range: { min: 0, max: 50, band: [0, 25] },
       label: 'Calcanhar à frente da anca',
       value: r1(reach.all),
       unit: '% da perna',
@@ -197,6 +210,7 @@ export function analyseSide(frames: Frame[], subject: Subject, slowMotion = 0): 
     },
     {
       id: 'kneeIc',
+      range: { min: 0, max: 45, band: [15, 30] },
       label: 'Joelho no contacto',
       value: r1(kneeIc.all),
       unit: '° de flexão',
@@ -208,6 +222,7 @@ export function analyseSide(frames: Frame[], subject: Subject, slowMotion = 0): 
     },
     {
       id: 'kneePeak',
+      range: { min: 20, max: 65, band: [35, 52] },
       label: 'Flexão máxima do joelho no apoio',
       value: r1(kneePeak.all),
       unit: '°',
@@ -219,6 +234,7 @@ export function analyseSide(frames: Frame[], subject: Subject, slowMotion = 0): 
     },
     {
       id: 'trunk',
+      range: { min: -5, max: 25, band: [3, 12] },
       label: 'Inclinação do tronco',
       value: r1(trunk),
       unit: '°',
@@ -231,6 +247,7 @@ export function analyseSide(frames: Frame[], subject: Subject, slowMotion = 0): 
       ? {
           id: 'osc',
           label: 'Oscilação vertical',
+          range: { min: 2, max: 14, band: [4, 8] as [number, number] },
           value: r1(oscCm),
           unit: 'cm',
           verdict: oscCm <= 8 ? 'Baixa' : oscCm <= 10 ? 'Moderada' : 'Alta',
@@ -241,6 +258,7 @@ export function analyseSide(frames: Frame[], subject: Subject, slowMotion = 0): 
       : {
           id: 'osc',
           label: 'Oscilação vertical',
+          range: { min: 2, max: 18, band: [5, 10] as [number, number] },
           value: r1(Number.isFinite(oscRel) ? oscRel * 100 : null),
           unit: '% da perna',
           verdict: !Number.isFinite(oscRel) ? 'Sem dados' : oscRel <= 0.1 ? 'Baixa' : oscRel <= 0.125 ? 'Moderada' : 'Alta',
@@ -250,6 +268,7 @@ export function analyseSide(frames: Frame[], subject: Subject, slowMotion = 0): 
         },
     {
       id: 'contact',
+      range: { min: 150, max: 400, band: [200, 300] },
       label: 'Tempo de contacto',
       value: round(contact.all, 0),
       unit: 'ms',
@@ -275,6 +294,8 @@ export function analyseSide(frames: Frame[], subject: Subject, slowMotion = 0): 
     metrics,
     kneeCurve,
     keyframes,
+    facing: dir as 1 | -1,
+    strideTimes,
   };
 }
 

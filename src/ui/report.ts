@@ -1,10 +1,11 @@
-// Renders the gait report from the analysis results.
+// Renders the gait report from the analysis results (screen and A4 print share this markup).
 
 import type { Metric, RearViewResult, SideViewResult, Subject } from '../analysis/types';
 import { buildAdvice, headline } from '../analysis/advice';
 import { STRIKE_PT } from '../analysis/side';
 import { PRONATION_PT } from '../analysis/rear';
 import { curveChart, pronationBand, strikeStrip } from './charts';
+import { rangeBar, rearFigure, sideFigure } from './figures';
 
 export interface ReportInput {
   subject: Subject;
@@ -19,10 +20,15 @@ const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 const num = (v: number | null | undefined, d = 1) =>
   v == null || !Number.isFinite(v) ? '–' : (Math.round(v * 10 ** d) / 10 ** d).toString().replace('.', ',');
 const LEVEL_WORD = { good: 'Dentro da referência', watch: 'A observar', flag: 'A trabalhar', info: 'Informativo' } as const;
+const GD = '<svg class="gd" aria-hidden="true"><use href="#gd"/></svg>';
 
 function badge(m: Metric) {
   const cls = m.level === 'flag' ? 'badge gold' : m.level === 'good' || m.level === 'info' ? 'badge dim' : 'badge';
   return `<span class="${cls}">${esc(m.verdict)}</span>`;
+}
+
+function status(m: Metric) {
+  return `<span class="status s-${m.level}" title="${LEVEL_WORD[m.level]}"><i aria-hidden="true"></i>${LEVEL_WORD[m.level]}</span>`;
 }
 
 function metricCard(m: Metric) {
@@ -34,9 +40,23 @@ function metricCard(m: Metric) {
     <div class="head"><h3>${esc(m.label)}</h3>${badge(m)}</div>
     <p class="val">${num(m.value)}<small>${esc(m.unit)}</small></p>
     ${sides}
+    ${rangeBar(m)}
     <p class="sub">${esc(m.note)}</p>
-    <p class="src">${esc(m.reference)} <span class="sr-only">${LEVEL_WORD[m.level]}</span></p>
+    <p class="src">${esc(m.reference)}</p>
   </article>`;
+}
+
+function summaryRows(ms: Metric[]) {
+  return ms
+    .map(
+      (m) => `<div class="sum-row">
+        <span class="sum-name">${esc(m.label)}</span>
+        <span class="sum-val">${num(m.value)} <small>${esc(m.unit)}</small></span>
+        <span class="sum-bar">${rangeBar(m)}</span>
+        <span class="sum-verdict">${badge(m)}${status(m)}</span>
+      </div>`,
+    )
+    .join('');
 }
 
 function quality(label: string, q: SideViewResult['quality']) {
@@ -61,6 +81,7 @@ export function renderReport(r: ReportInput): string {
     subject.name || 'Corredor',
     date,
     subject.surface === 'treadmill' ? 'Passadeira' : 'Exterior',
+    subject.heightCm ? `${num(subject.heightCm, 0)} cm` : '',
     subject.speedKmh ? `${num(subject.speedKmh)} km/h` : '',
     subject.shoe,
     r.demo ? 'Exemplo com dados sintéticos' : '',
@@ -70,34 +91,45 @@ export function renderReport(r: ReportInput): string {
   if (strikeM && side?.strike.dominant)
     stats.push(`<div class="stat key"><p class="v">${esc(STRIKE_PT[side.strike.dominant])}</p><p class="l">tipo de apoio, em ${Math.round(side.strike.share[side.strike.dominant] * 100)} % dos passos</p><p class="s">Ângulo ${num(strikeM.value)}° · vista lateral</p></div>`);
   if (pronM && rear?.pronation.verdict)
-    stats.push(`<div class="stat ${stats.length ? "" : "key"}"><p class="v">${esc(PRONATION_PT[rear.pronation.verdict])}</p><p class="l">pisada, ${num(pronM.value)}° de eversão do calcanhar no pico</p><p class="s">Vista de trás</p></div>`);
+    stats.push(`<div class="stat ${stats.length ? '' : 'key'}"><p class="v">${esc(PRONATION_PT[rear.pronation.verdict])}</p><p class="l">pisada, ${num(pronM.value)}° de eversão do calcanhar no pico</p><p class="s">Vista de trás</p></div>`);
   if (cad) stats.push(`<div class="stat"><p class="v">${cad}<small>ppm</small></p><p class="l">passos por minuto</p><p class="s">Cadência</p></div>`);
   if (tibiaM?.value != null) stats.push(`<div class="stat"><p class="v">${num(tibiaM.value)}<small>°</small></p><p class="l">${esc(tibiaM.verdict.toLowerCase())}</p><p class="s">Tíbia no contacto</p></div>`);
   else if (dropM?.value != null) stats.push(`<div class="stat"><p class="v">${num(dropM.value)}<small>°</small></p><p class="l">queda da anca, ${esc(dropM.verdict.toLowerCase())}</p><p class="s">Vista de trás</p></div>`);
 
+  // every metric once, cadence from the side view when both exist
+  const all = [...(side?.metrics ?? []), ...(rear?.metrics ?? []).filter((m) => !(side && m.id === 'cadence'))];
+  const counts = { flag: all.filter((m) => m.level === 'flag').length, watch: all.filter((m) => m.level === 'watch').length, good: all.filter((m) => m.level === 'good').length };
+
+  const kfSide = side?.keyframes.find((k) => k.pose);
+  const kfRear = rear?.keyframes.find((k) => k.pose);
+  const figures = [
+    kfSide ? `<figure class="card fig-card">${sideFigure(kfSide.pose!, kfSide.side, side!.facing, kfSide.angles)}<figcaption>${esc(kfSide.label)}. Linhas a tracejado: a vertical e o prolongamento da coxa.</figcaption></figure>` : '',
+    kfRear ? `<figure class="card fig-card">${rearFigure(kfRear.pose!, rear!.pronation.bySide, dropM?.value ?? null)}<figcaption>Meio do apoio, de trás. Ângulo entre o prolongamento da canela e a linha tornozelo-calcanhar.</figcaption></figure>` : '',
+  ].filter(Boolean);
+
   const sidePart = side
-    ? `<div class="part">
+    ? `<div class="part" id="r-side">
         <p class="eyebrow">Vista lateral</p>
         <h3 class="display h3">Como o pé chega ao chão</h3>
         <p class="sub">${esc(side.strike.steps.length ? `${side.strike.steps.length} apoios analisados.` : 'Não encontrei apoios suficientes.')}</p>
         ${side.strike.steps.length ? `<article class="card"><div class="head"><h3>Ângulo do pé em cada apoio</h3><span class="badge dim">${side.strike.steps.length} passos</span></div>${strikeStrip(side.strike.steps)}<div class="legend" aria-hidden="true"><span><svg width="10" height="10"><circle cx="5" cy="5" r="4.5" fill="currentColor"/></svg>Pé esquerdo</span><span><svg width="10" height="10"><circle cx="5" cy="5" r="3.8" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>Pé direito</span></div><p class="src">Ângulo do pé no primeiro contacto, contra o pé assente. Calcanhar acima de 8°, antepé abaixo de -1,6° (Altman e Davis, 2012).</p></article>` : ''}
-        <div class="grid c3" style="margin-top:20px">${side.metrics.filter((m) => m.id !== 'cadence' || !rear).map(metricCard).join('')}</div>
-        ${side.kneeCurve.length ? `<article class="card" style="margin-top:20px"><div class="head"><h3>Flexão do joelho ao longo da passada</h3><span class="badge dim">Média por pé</span></div>${curveChart(side.kneeCurve, { label: 'Flexão do joelho de contacto a contacto', xLabel: 'da passada', marks: [{ at: 38, label: 'fim do apoio (aprox.)' }] })}<p class="src">0 % e 100 %: o mesmo pé a tocar no chão. O primeiro pico é a absorção do impacto; o segundo, o joelho a recolher no voo.</p></article>` : ''}
+        <div class="grid c3" style="margin-top:20px">${side.metrics.map(metricCard).join('')}</div>
+        ${side.kneeCurve.length ? `<article class="card" style="margin-top:20px"><div class="head"><h3>Flexão do joelho ao longo da passada</h3><span class="badge dim">Média por pé</span></div>${curveChart(side.kneeCurve, { label: 'Flexão do joelho de contacto a contacto', xLabel: 'da passada', band: [35, 52], bandLabel: 'PICO NO APOIO', marks: [{ at: 38, label: 'fim do apoio (aprox.)' }] })}<p class="src">0 % e 100 %: o mesmo pé a tocar no chão. O primeiro pico é a absorção do impacto; o segundo, o joelho a recolher no voo.</p></article>` : ''}
       </div>`
     : '';
 
   const rearPart = rear
-    ? `<div class="part">
+    ? `<div class="part" id="r-rear">
         <p class="eyebrow">Vista de trás</p>
         <h3 class="display h3">Pronação e estabilidade</h3>
         <p class="sub">${rear.quality.steps} apoios analisados.</p>
-        <div class="grid c3">${rear.metrics.map(metricCard).join('')}</div>
-        ${rear.rearfootCurve.length ? `<article class="card" style="margin-top:20px"><div class="head"><h3>Ângulo do calcanhar durante o apoio</h3><span class="badge dim">Média por pé</span></div>${curveChart(rear.rearfootCurve, { label: 'Eversão do calcanhar durante o apoio', xLabel: 'do apoio', band: pronationBand, bandLabel: 'NEUTRO' })}<p class="src">Positivo: o calcanhar tomba para dentro (eversão, pronação). A faixa marca o intervalo neutro no pico.</p></article>` : ''}
+        <div class="grid c3">${rear.metrics.filter((m) => !(side && m.id === 'cadence')).map(metricCard).join('')}</div>
+        ${rear.rearfootCurve.length ? `<article class="card" style="margin-top:20px"><div class="head"><h3>Ângulo do calcanhar durante o apoio</h3><span class="badge dim">Média por pé</span></div>${curveChart(rear.rearfootCurve, { label: 'Eversão do calcanhar durante o apoio', xLabel: 'do apoio', band: pronationBand, bandLabel: 'NEUTRO NO PICO' })}<p class="src">Positivo: o calcanhar tomba para dentro (eversão, pronação). A faixa marca o intervalo neutro no pico.</p></article>` : ''}
       </div>`
     : '';
 
   const photos = r.photos.length
-    ? `<div class="part"><p class="eyebrow">Imagens</p><h3 class="display h3">Os momentos medidos</h3><div class="photos" style="margin-top:24px">${r.photos
+    ? `<div class="part" id="r-photos"><p class="eyebrow">Imagens</p><h3 class="display h3">Os momentos medidos</h3><div class="photos" style="margin-top:24px">${r.photos
         .map((p) => `<figure><img src="${p.src}" alt="${esc(p.caption)}, com o esqueleto detetado"><figcaption>${esc(p.caption)}</figcaption></figure>`)
         .join('')}</div></div>`
     : '';
@@ -108,7 +140,17 @@ export function renderReport(r: ReportInput): string {
         .join('')}</div>`
     : `<article class="card"><h3>Nada a corrigir com urgência</h3><p class="sub">Todos os valores medidos estão dentro das referências. Mantém o reforço de força e repete a análise daqui a uns meses ou quando mudares de sapatilhas.</p></article>`;
 
+  const nav = [
+    ['r-summary', 'Resumo'],
+    ['r-model', 'Boneco 3D'],
+    ['r-advice', 'O que trabalhar'],
+    side ? ['r-side', 'Lateral'] : null,
+    rear ? ['r-rear', 'De trás'] : null,
+    ['r-quality', 'Qualidade'],
+  ].filter(Boolean) as string[][];
+
   return `<div class="wrap">
+    <div class="print-head">${GD}<span><b>Steppin</b> · Relatório de passada</span><span>${esc(chips.slice(0, 2).join(' · '))}</span></div>
     <div class="report-head">
       <div>
         <p class="eyebrow">03 · Relatório</p>
@@ -122,14 +164,42 @@ export function renderReport(r: ReportInput): string {
     </div>
     <div class="meta">${chips.map((c) => `<span class="chip">${esc(c)}</span>`).join('')}</div>
     <p class="lead">${esc(headline(side, rear))}</p>
+    <nav class="rnav no-print" aria-label="Secções do relatório">${nav.map(([id, t]) => `<a href="#${id}">${t}</a>`).join('')}</nav>
     <div class="stats">${stats.join('')}</div>
-    <div class="part"><p class="eyebrow">O que trabalhar</p><h3 class="display h3">Por ordem de prioridade</h3><p class="sub">Uma coisa de cada vez. Mudanças de técnica levam 6 a 12 semanas.</p>${adv}</div>
+
+    <div class="part" id="r-summary">
+      <div class="sum-head">
+        <div><p class="eyebrow">Resumo</p><h3 class="display h3">Todos os números</h3></div>
+        <div class="tally"><span><b>${counts.flag}</b> a trabalhar</span><span><b>${counts.watch}</b> a observar</span><span><b>${counts.good}</b> dentro da referência</span></div>
+      </div>
+      <div class="card sum">${summaryRows(all)}</div>
+    </div>
+
+    <div class="part" id="r-model">
+      <p class="eyebrow">Boneco</p>
+      <h3 class="display h3">A tua corrida em 3D</h3>
+      <p class="sub">Reconstruído a partir do vídeo. Arrasta para rodar. Perna esquerda clara, direita escura.</p>
+      <div class="model-grid">
+        <div class="card stage no-print" data-replay>
+          <div class="stage-empty">Sem dados 3D para este vídeo.</div>
+          <div class="stage-ctl">
+            <div class="seg" role="group" aria-label="Velocidade"><button type="button" data-speed="1" aria-pressed="true">1×</button><button type="button" data-speed="0.5">½×</button><button type="button" data-speed="0.25">¼×</button></div>
+            <div class="seg" role="group" aria-label="Vista"><button type="button" data-orbit="35deg 78deg auto" aria-pressed="true">3/4</button><button type="button" data-orbit="90deg 84deg auto">Lado</button><button type="button" data-orbit="180deg 84deg auto">Trás</button><button type="button" data-orbit="0deg 84deg auto">Frente</button></div>
+          </div>
+        </div>
+        <div class="figs">${figures.join('')}</div>
+      </div>
+    </div>
+
+    <div class="part" id="r-advice"><p class="eyebrow">O que trabalhar</p><h3 class="display h3">Por ordem de prioridade</h3><p class="sub">Uma coisa de cada vez. Mudanças de técnica levam 6 a 12 semanas.</p>${adv}</div>
     ${sidePart}
     ${rearPart}
     ${photos}
-    <div class="part"><p class="eyebrow">Qualidade da análise</p><h3 class="display h3">Quanto confiar nos números</h3><p class="sub">Medido com um modelo de pose (MediaPipe) sobre vídeo 2D, sem marcadores. Bom para triagem e para comparar antes e depois.</p>
+    <div class="part" id="r-quality"><p class="eyebrow">Qualidade da análise</p><h3 class="display h3">Quanto confiar nos números</h3><p class="sub">Medido com um modelo de pose (MediaPipe) sobre vídeo 2D, sem marcadores. Bom para triagem e para comparar antes e depois.</p>
       <div class="grid c2">${side ? quality('Vídeo de lado', side.quality) : ''}${rear ? quality('Vídeo de trás', rear.quality) : ''}</div>
     </div>
     <p class="disclaimer">Este relatório não é um diagnóstico e não substitui a avaliação de um fisioterapeuta, médico ou podologista. Com dor, procura um profissional. A pronação é um movimento normal do pé; a escolha de sapatilhas pelo tipo de pisada tem pouca evidência a prevenir lesões, o conforto ao calçar é melhor critério.</p>
+    <div class="print-foot">${GD}<span>Steppin · Gonçalo Duarte · rgvduarte.github.io/Steppin</span></div>
   </div>`;
 }
+

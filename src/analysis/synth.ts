@@ -40,7 +40,7 @@ export function synthSide(o: SynthOpts = {}): Frame[] {
   const A = o.strikeDeg ?? 15, lean = o.leanDeg ?? 8, scale = o.timeScale ?? 1;
   const noise = rng(7);
   const stride = 120 / cad; // seconds
-  const G = 800, hipX = 500, legLen = 400, seg = 172, L = 110, dir = 1;
+  const G = 800, hipX = 500, legLen = 400, seg = 176, L = 110, dir = 1;
   const stance = 0.36;
   const frames: Frame[] = [];
   const footAt = (phase: number) => {
@@ -87,8 +87,19 @@ export function synthSide(o: SynthOpts = {}): Frame[] {
       set(27 + b, f.ax, f.ay);
       set(29 + b, f.hx, f.hy);
       set(31 + b, f.tx, f.ty);
-      set(11 + b, hipX + dir * Math.sin(rad(lean)) * 300, hipY - Math.cos(rad(lean)) * 300);
+      const sx = hipX + dir * Math.sin(rad(lean)) * 300, sy = hipY - Math.cos(rad(lean)) * 300;
+      set(11 + b, sx, sy);
+      // arms swing against the leg of the same side
+      const swing = rad(32 * Math.sin(2 * Math.PI * (t / stride + off) + Math.PI / 2));
+      const ex = sx - dir * Math.sin(swing) * 135, ey = sy + Math.cos(swing) * 135;
+      const fa = swing - rad(85);
+      set(13 + b, ex, ey);
+      set(15 + b, ex - dir * Math.sin(fa) * 125, ey + Math.cos(fa) * 125);
     }
+    const shx = hipX + dir * Math.sin(rad(lean)) * 300, shy = hipY - Math.cos(rad(lean)) * 300;
+    set(0, shx + dir * 34, shy - 92);
+    set(7, shx + dir * 8, shy - 100);
+    set(8, shx + dir * 8, shy - 100);
     frames.push({ t: t * scale, lm });
   }
   return frames;
@@ -124,9 +135,26 @@ export function synthRear(o: SynthOpts = {}): Frame[] {
       set(27 + b, ankleX, ankleY);
       set(29 + b, heelX, heelY);
       set(31 + b, ankleX, heelY - 5);
-      set(11 + b, hip[side], hipY - 300);
+      set(11 + b, hip[side] + (side === 'L' ? -1 : 1) * 62, hipY - 300);
     }
+    set(0, (hip.L + hip.R) / 2, hipY - 380);
     frames.push({ t, lm });
   }
   return frames;
+}
+
+const Z: Record<number, number> = {
+  0: 0, 7: -0.07, 8: 0.07, 11: -0.19, 12: 0.19, 13: -0.22, 14: 0.22, 15: -0.2, 16: 0.2,
+  23: -0.1, 24: 0.1, 25: -0.1, 26: 0.1, 27: -0.1, 28: 0.1, 29: -0.1, 30: 0.1, 31: -0.11, 32: 0.11,
+};
+
+/** Adds metric world landmarks (origin between the hips, y down) to synthetic side-view frames. */
+export function withWorld(frames: Frame[]): Frame[] {
+  const k = 0.88 / 400; // 400 px of leg is ~0.88 m
+  return frames.map((f) => {
+    if (!f.lm) return f;
+    const hx = (f.lm[23].x + f.lm[24].x) / 2, hy = (f.lm[23].y + f.lm[24].y) / 2;
+    const w = f.lm.map((p, i) => ({ x: (p.x - hx) * k, y: (p.y - hy) * k, z: Z[i] ?? 0, v: i in Z ? 0.95 : 0.1 }));
+    return { ...f, w };
+  });
 }
