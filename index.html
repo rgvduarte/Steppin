@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Steppin · Análise de passada</title>
+<meta name="description" content="Carrega um vídeo de lado e um de trás e recebe o relatório da tua passada: tipo de apoio, pronação, cadência e o que trabalhar. Tudo corre no teu browser.">
+<meta name="theme-color" content="#0b0b0c">
+<link rel="icon" href="./favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="orbs" aria-hidden="true"><i></i><i></i><i></i></div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="gd" viewBox="-2 -2 165.8 104"><path d="M0.00 38.20 A38.20 38.20 0 0 1 38.20 0.00 L123.61 0.00 A38.20 38.20 0 0 1 161.80 38.20 L161.80 61.80 A38.20 38.20 0 0 1 123.61 100.00 L103.85 100.00 A5.57 5.57 0 0 1 98.28 94.43 L98.28 81.97 A5.57 5.57 0 0 1 103.85 76.39 L123.61 76.39 A14.59 14.59 0 0 0 138.20 61.80 L138.20 38.20 A14.59 14.59 0 0 0 123.61 23.61 L38.20 23.61 A14.59 14.59 0 0 0 23.61 38.20 L23.61 61.80 A14.59 14.59 0 0 0 38.20 76.39 L63.53 76.39 A5.57 5.57 0 0 0 69.10 70.82 L69.10 67.38 A5.57 5.57 0 0 0 63.53 61.80 L46.56 61.80 A5.57 5.57 0 0 1 40.98 56.23 L40.98 43.77 A5.57 5.57 0 0 1 46.56 38.20 L87.13 38.20 A5.57 5.57 0 0 1 92.71 43.77 L92.71 94.43 A5.57 5.57 0 0 1 87.13 100.00 L38.20 100.00 A38.20 38.20 0 0 1 0.00 61.80 Z"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/></symbol>
+</svg>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Steppin, início">
+      <svg aria-hidden="true"><use href="#gd"/></svg>
+      <span><small>Gonçalo Duarte</small><b>Steppin</b></span>
+    </a>
+    <nav class="nav-links" aria-label="Secções">
+      <a href="#protocolo">Protocolo</a>
+      <a href="#videos" class="btn sm">Analisar</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap">
+      <p class="eyebrow">Análise de passada</p>
+      <h1 class="display h1">Mostra-me<br>como <span>corres.</span></h1>
+      <p class="lead">Carrega um vídeo de lado e um de trás. Recebes o relatório da tua passada: tipo de apoio, pronação, cadência e o que trabalhar. Os vídeos não saem do teu dispositivo.</p>
+      <div class="actions">
+        <a class="btn gold" href="#videos">Começar a análise<svg aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        <a class="btn ghost" href="#protocolo">Como gravar</a>
+      </div>
+      <div class="facts">
+        <div><b>Apoio</b><p>Calcanhar, médio-pé ou antepé, passo a passo, a partir do vídeo de lado.</p></div>
+        <div><b>Pronação</b><p>Pronador, neutro ou supinador, pelo ângulo do calcanhar no vídeo de trás.</p></div>
+        <div><b>Mecânica</b><p>Cadência, overstride, joelho, tronco, queda da anca e cruzamento dos pés.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="protocolo">
+    <div class="wrap">
+      <p class="eyebrow">01 · Protocolo</p>
+      <h2 class="display h2">Como gravar</h2>
+      <p class="lead">A análise vale o que vale o vídeo. Dez minutos de preparação dão-te ângulos fiáveis.</p>
+
+      <div class="steps">
+        <div>
+          <span class="n">01</span>
+          <h3>Onde</h3>
+          <ul>
+            <li>Passadeira, ao teu ritmo de treino fácil, inclinação 1 %.</li>
+            <li>Aquece 5 minutos antes de gravar.</li>
+            <li>Sem passadeira: piso plano, 15 m de corredor e câmara fixa a meio.</li>
+          </ul>
+        </div>
+        <div>
+          <span class="n">02</span>
+          <h3>Câmara</h3>
+          <ul>
+            <li>Telemóvel num tripé, na horizontal, sem zoom e sem seguir.</li>
+            <li>Câmara lenta a 120 ou 240 fps. A 30 fps o contacto do pé quase não se vê.</li>
+            <li>Boa luz de frente, fundo liso, nada de contraluz.</li>
+          </ul>
+        </div>
+        <div>
+          <span class="n">03</span>
+          <h3>De lado</h3>
+          <ul>
+            <li>A 2 ou 3 m, perpendicular à passadeira, à altura do joelho.</li>
+            <li>Corpo inteiro no enquadramento, com margem nos pés.</li>
+            <li>15 segundos. Para os dois pés, grava também do outro lado.</li>
+          </ul>
+        </div>
+        <div>
+          <span class="n">04</span>
+          <h3>De trás</h3>
+          <ul>
+            <li>A 2 ou 3 m, centrada atrás de ti, à altura do joelho.</li>
+            <li>Calcanhares, tornozelos e gémeos bem visíveis.</li>
+            <li>15 segundos de corrida estável.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="setup">
+        <div class="glass">
+          <h3 style="margin:0;font:600 17px/1.3 var(--font-sans)">Roupa e calçado</h3>
+          <ul>
+            <li>Calções ou leggings curtas: tornozelos e joelhos à vista.</li>
+            <li>Meias e sapatilhas que contrastem com o chão e o fundo.</li>
+            <li>T-shirt justa, nada de casacos largos.</li>
+            <li>As sapatilhas com que treinas. Se quiseres comparar, grava também descalço ou com outro modelo.</li>
+          </ul>
+          <p class="src">Protocolo baseado na análise 2D em vídeo usada em clínica (Souza, 2016) e nos limiares de ângulo de ataque de Altman e Davis (2012).</p>
+        </div>
+        <svg class="diagram" viewBox="0 0 520 360" role="img" aria-label="Vista de cima: passadeira ao centro, câmara lateral a 2 a 3 metros à direita, câmara traseira a 2 a 3 metros atrás">
+          <rect x="150" y="40" width="120" height="250" rx="20" fill="none" stroke="currentColor" stroke-opacity=".35" stroke-width="1.5"/>
+          <rect x="166" y="56" width="88" height="218" rx="10" fill="currentColor" fill-opacity=".06"/>
+          <ellipse cx="210" cy="140" rx="26" ry="16" fill="currentColor" fill-opacity=".9"/>
+          <circle cx="210" cy="140" r="10" fill="var(--black)"/>
+          <path d="M210 112 v-36" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 4"/>
+          <path d="M204 82 l6 -10 l6 10" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <text x="210" y="62" text-anchor="middle" class="strong">sentido</text>
+          <g>
+            <rect x="420" y="128" width="34" height="24" rx="6" fill="currentColor"/>
+            <circle cx="420" cy="140" r="7" fill="var(--black)" stroke="currentColor" stroke-width="2"/>
+            <path d="M412 140 H246" stroke="currentColor" stroke-opacity=".5" stroke-dasharray="4 5"/>
+            <text x="437" y="176" text-anchor="middle" class="strong">Lateral</text>
+            <text x="437" y="192" text-anchor="middle">2 a 3 m · joelho</text>
+          </g>
+          <g>
+            <rect x="198" y="318" width="24" height="34" rx="6" fill="currentColor"/>
+            <circle cx="210" cy="318" r="7" fill="var(--black)" stroke="currentColor" stroke-width="2"/>
+            <path d="M210 310 V160" stroke="currentColor" stroke-opacity=".5" stroke-dasharray="4 5"/>
+            <text x="236" y="332" class="strong">De trás</text>
+            <text x="236" y="348">2 a 3 m · joelho</text>
+          </g>
+          <text x="20" y="30" class="strong">VISTA DE CIMA</text>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="videos">
+    <div class="wrap">
+      <p class="eyebrow">02 · Vídeos</p>
+      <h2 class="display h2">Carrega a corrida</h2>
+      <p class="lead">Um vídeo chega para começar. Com os dois, o relatório fica completo. MP4 ou MOV, até 20 segundos são analisados.</p>
+
+      <div class="grid c2 uploads">
+        <label class="drop" data-view="side">
+          <input type="file" accept="video/*" aria-label="Vídeo de lado">
+          <div class="ill" data-ill>
+            <svg viewBox="0 0 120 100" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="66" cy="16" r="8"/><path d="M62 26 L54 52 L66 70 L60 92 M54 52 L36 64 L28 86 M60 34 L76 46 M60 34 L44 40"/><path d="M10 94 H110" stroke-opacity=".35"/>
+            </svg>
+          </div>
+          <div class="file"><h3>Vídeo de lado</h3><span class="badge dim" data-status>Por carregar</span></div>
+          <p data-desc>Para o tipo de apoio, overstride, joelho, tronco e cadência.</p>
+          <button class="btn ghost sm clear" type="button" hidden>Trocar vídeo</button>
+        </label>
+        <label class="drop" data-view="rear">
+          <input type="file" accept="video/*" aria-label="Vídeo de trás">
+          <div class="ill" data-ill>
+            <svg viewBox="0 0 120 100" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="60" cy="14" r="8"/><path d="M60 24 V52 M48 52 H72 M48 52 L46 74 L44 92 M72 52 L76 72 L78 84 M60 30 L42 46 M60 30 L78 46"/><path d="M10 94 H110" stroke-opacity=".35"/>
+            </svg>
+          </div>
+          <div class="file"><h3>Vídeo de trás</h3><span class="badge dim" data-status>Por carregar</span></div>
+          <p data-desc>Para a pronação, queda da anca, joelho para dentro e largura da passada.</p>
+          <button class="btn ghost sm clear" type="button" hidden>Trocar vídeo</button>
+        </label>
+      </div>
+
+      <div class="fields">
+        <div class="field"><label for="f-name">Nome</label><input id="f-name" type="text" autocomplete="name" placeholder="Opcional"></div>
+        <div class="field"><label for="f-height">Altura (cm)</label><input id="f-height" type="number" inputmode="numeric" min="120" max="220" placeholder="175"></div>
+        <div class="field"><label for="f-speed">Velocidade (km/h)</label><input id="f-speed" type="number" inputmode="decimal" min="4" max="30" step="0.1" placeholder="Opcional"></div>
+        <div class="field"><label for="f-slow">Câmara lenta</label>
+          <select id="f-slow">
+            <option value="0">Detetar sozinho</option>
+            <option value="1">Tempo real</option>
+            <option value="2">×2 (60 fps)</option>
+            <option value="4">×4 (120 fps)</option>
+            <option value="8">×8 (240 fps)</option>
+          </select>
+        </div>
+        <div class="field"><label for="f-shoe">Sapatilhas</label><input id="f-shoe" type="text" placeholder="Modelo, opcional"></div>
+        <div class="field"><label for="f-surface">Superfície</label>
+          <select id="f-surface"><option value="treadmill">Passadeira</option><option value="overground">Exterior</option></select>
+        </div>
+      </div>
+      <p class="hint">A altura converte a oscilação vertical em centímetros. A deteção da câmara lenta usa a cadência: se o relatório parecer lento, escolhe o fator à mão.</p>
+
+      <div class="actions">
+        <button class="btn gold" type="button" id="run" disabled>Analisar a passada<svg aria-hidden="true"><use href="#i-arrow"/></svg></button>
+        <button class="btn ghost" type="button" id="demo">Ver um relatório de exemplo</button>
+      </div>
+
+      <div class="progress" id="progress" hidden aria-live="polite">
+        <p class="eyebrow" style="margin:0">A analisar</p>
+        <div class="row"><span>Modelo de pose</span><div class="bar" data-bar="model"><i></i></div><span class="mono" data-pct="model">0 %</span></div>
+        <div class="row" data-row="side"><span>Vídeo de lado</span><div class="bar" data-bar="side"><i></i></div><span class="mono" data-pct="side">0 %</span></div>
+        <div class="row" data-row="rear"><span>Vídeo de trás</span><div class="bar" data-bar="rear"><i></i></div><span class="mono" data-pct="rear">0 %</span></div>
+        <p class="msg" id="msg">A carregar o modelo de pose (cerca de 9 MB, só da primeira vez).</p>
+        <button class="btn ghost sm" type="button" id="cancel" style="margin-top:16px">Cancelar</button>
+      </div>
+      <div class="error" id="error" hidden role="alert"></div>
+    </div>
+  </section>
+
+  <section class="block" id="relatorio" hidden></section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span style="display:inline-flex;align-items:center;gap:12px"><svg aria-hidden="true"><use href="#gd"/></svg>Steppin · Gonçalo Duarte</span>
+    <span>Processado no teu dispositivo · não substitui avaliação clínica</span>
+  </div>
+</footer>
+
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>
